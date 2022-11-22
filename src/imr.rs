@@ -1,5 +1,6 @@
 //! The Internal Model Representation used by our migration cli tool
 use std::collections::hash_map::DefaultHasher;
+use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
 use ordered_float::OrderedFloat;
@@ -157,6 +158,8 @@ pub enum Annotation {
     PrimaryKey,
     /// UNIQUE constraint
     Unique,
+    /// Foreign Key constraint
+    ForeignKey(ForeignKey),
 }
 
 impl Annotation {
@@ -192,6 +195,8 @@ impl Annotation {
             (Annotation::PrimaryKey, _) => false,
             (Annotation::Unique, Annotation::Unique) => true,
             (Annotation::Unique, _) => false,
+            (Annotation::ForeignKey(_), Annotation::ForeignKey(_)) => true,
+            (Annotation::ForeignKey(_), _) => false,
         }
     }
 
@@ -218,6 +223,7 @@ impl Annotation {
             Annotation::NotNull => state.write_i8(7),
             Annotation::PrimaryKey => state.write_i8(8),
             Annotation::Unique => state.write_i8(9),
+            Annotation::ForeignKey(_) => state.write_i8(10),
         }
         state.finish()
     }
@@ -254,6 +260,64 @@ mod test {
                 name: "foo".to_string()
             })))
         );
+    }
+}
+
+/// Represents a foreign key
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
+#[serde(rename_all = "PascalCase")]
+pub struct ForeignKey {
+    /// Name of the table that should be referenced
+    pub table_name: String,
+    /// Name of the column that should be referenced
+    pub column_name: String,
+    /// Action to be used in case of on delete
+    pub on_delete: ReferentialAction,
+    /// Action to be used in case of an update
+    pub on_update: ReferentialAction,
+}
+
+impl Default for ForeignKey {
+    fn default() -> Self {
+        ForeignKey {
+            table_name: String::from(""),
+            column_name: String::from(""),
+            on_delete: Default::default(),
+            on_update: Default::default(),
+        }
+    }
+}
+
+/**
+Action that gets trigger on update and on delete.
+*/
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[serde(rename_all = "PascalCase")]
+pub enum ReferentialAction {
+    /// Stop operation if any keys still depend on the parent table
+    Restrict,
+    /// The action is cascaded
+    Cascade,
+    /// The field is set to null
+    SetNull,
+    /// The field is set to its default
+    SetDefault,
+}
+
+impl Default for ReferentialAction {
+    fn default() -> Self {
+        Self::Restrict
+    }
+}
+
+impl Display for ReferentialAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReferentialAction::Restrict => write!(f, "RESTRICT"),
+            ReferentialAction::Cascade => write!(f, "CASCADE"),
+            ReferentialAction::SetNull => write!(f, "SET NULL"),
+            ReferentialAction::SetDefault => write!(f, "SET DEFAULT"),
+        }
     }
 }
 

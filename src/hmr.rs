@@ -9,6 +9,8 @@
 //! [`imr::DbType`]: crate::imr::DbType
 //! [`imr::Annotation`]: crate::imr::Annotation
 
+use crate::imr;
+
 /// A type level version of [`imr::DbType`] to be used in generic type bound checks
 ///
 /// [`imr::DbType`]: crate::imr::DbType
@@ -70,98 +72,25 @@ pub mod db_type {
 /// [`imr::Annotation`]: crate::imr::Annotation
 pub mod annotations {
     use crate::imr;
-    use std::marker::PhantomData;
-
-    /// Trait to store a concrete optional annotation as generic type parameter.
-    pub trait Annotation<T: 'static + Copy>: 'static + Copy {
-        /// Convert the annotation into its imr representation.
-        ///
-        /// [`NotSet`] and [`Forbidden`] return `None`.
-        /// [`Implicit`] and any annotation itself return `Some`.
-        fn as_imr(&self) -> Option<imr::Annotation>;
-
-        /// This flag is set on annotations like [`PrimaryKey`] which don't allow null but
-        /// databases don't want you to tell them.
-        const IMPLICIT_NOT_NULL: bool = false;
-
-        /// This flag indicates whether this annotation has been set or not.
-        ///
-        /// It differentiates [NotSet] and [Forbidden] from [Implicit] and the annotation itself (i.e. [Self]).
-        const IS_SET: bool;
-    }
-
-    /// An annotation which has not been set
-    #[derive(Copy, Clone)]
-    pub struct NotSet<T>(PhantomData<T>);
-    impl<T> NotSet<T> {
-        /// Alternative to constructor which avoids importing [`PhantomData`]
-        pub const fn new() -> Self {
-            NotSet(PhantomData)
-        }
-    }
-    impl<T: Annotation<T>> Annotation<T> for NotSet<T> {
-        fn as_imr(&self) -> Option<imr::Annotation> {
-            None
-        }
-
-        const IS_SET: bool = false;
-    }
-
-    /// An annotation which is implied by a field's datatype
-    #[derive(Copy, Clone)]
-    pub struct Implicit<T>(T);
-    impl<T> Implicit<T> {
-        /// Constructor to keep similar API to [`Forbidden`] and [`NotSet`]
-        pub const fn new(anno: T) -> Self {
-            Implicit(anno)
-        }
-    }
-    impl<T: Annotation<T>> Annotation<T> for Implicit<T> {
-        fn as_imr(&self) -> Option<imr::Annotation> {
-            self.0.as_imr()
-        }
-
-        const IMPLICIT_NOT_NULL: bool = T::IMPLICIT_NOT_NULL;
-        const IS_SET: bool = true;
-    }
-
-    /// An annotation which is forbidden to be set.
-    #[derive(Copy, Clone)]
-    pub struct Forbidden<T>(PhantomData<T>);
-    impl<T> Forbidden<T> {
-        /// Alternative to constructor which avoids importing [`PhantomData`]
-        pub const fn new() -> Self {
-            Forbidden(PhantomData)
-        }
-    }
-    impl<T: Annotation<T>> Annotation<T> for Forbidden<T> {
-        fn as_imr(&self) -> Option<imr::Annotation> {
-            None
-        }
-
-        const IS_SET: bool = false;
-    }
 
     macro_rules! impl_annotations {
-        ($($(#[doc = $doc:literal])* $field:ident $anno:ident $(($data:ty))?, $implicit_not_null:expr,)*) => {
+        ($($(#[doc = $doc:literal])* $anno:ident $(($data:ty))?,)*) => {
             $(
                 $(#[doc = $doc])*
-                #[derive(Copy, Clone)]
                 pub struct $anno$((
                     /// The annotation's data
                     pub $data
                 ))?;
 
-                impl Annotation<$anno> for $anno {
-                    fn as_imr(&self) -> Option<imr::Annotation> {
-                        Some(imr::Annotation::$anno$(({
+                impl AsImr for $anno {
+                    type Imr = imr::Annotation;
+
+                    fn as_imr(&self) -> imr::Annotation {
+                        imr::Annotation::$anno$(({
                             let data: &$data = &self.0;
                             data.as_imr()
-                        }))?)
+                        }))?
                     }
-
-                    const IMPLICIT_NOT_NULL: bool = $implicit_not_null;
-                    const IS_SET: bool = true;
                 }
             )*
         };
@@ -169,37 +98,32 @@ pub mod annotations {
 
     impl_annotations!(
         /// Will set the current time of the database when a row is created.
-        auto_create_time AutoCreateTime, false,
+        AutoCreateTime,
         /// Will set the current time of the database when a row is updated.
-        auto_update_time AutoUpdateTime, false,
+        AutoUpdateTime,
         /// AUTO_INCREMENT constraint
-        auto_increment AutoIncrement, false,
+        AutoIncrement,
         /// A list of choices to set
-        choices Choices(&'static [&'static str]), false,
+        Choices(&'static [&'static str]),
         /// DEFAULT constraint
-        default DefaultValue(DefaultValueData), false,
+        DefaultValue(DefaultValueData),
         /// Create an index. The optional [IndexData] can be used, to build more complex indexes.
-        index Index(Option<IndexData>), false,
+        Index(Option<IndexData>),
         /// Only for VARCHAR. Specifies the maximum length of the column's content.
-        max_length MaxLength(i32), false,
+        MaxLength(i32),
         /// The annotated column will be used as primary key
-        primary_key PrimaryKey, true,
+        PrimaryKey,
         /// UNIQUE constraint
-        unique Unique, false,
+        Unique,
     );
 
-    /// This trait is used to "compute" [`Annotations<...>`]'s next concrete type after a step in the builder pattern.
-    ///
-    /// It would be reasonable to put the actual "step" method into this trait: `some_annos.add(SomeAnno)`
-    /// Sadly rust's traits don't support const methods (yet?).
-    /// So each "step" method needs its own name and exists completely detached to this trait: `some_annos.some_anno(SomeAnno)`
-    pub trait Step<T> {
-        /// The resulting type after this step
-        type Output;
-    }
+    /// Action to take on a foreign key in case of on delete
+    pub type OnDelete = imr::ReferentialAction;
+
+    /// Action take on a foreign key in case of an update
+    pub type OnUpdate = imr::ReferentialAction;
 
     /// Represents a complex index
-    #[derive(Copy, Clone)]
     pub struct IndexData {
         /// Name of the index. Can be used multiple times in a model to create an
         /// index with multiple columns.
@@ -211,7 +135,6 @@ pub mod annotations {
     }
 
     /// A column's default value which is any non object / array json value
-    #[derive(Copy, Clone)]
     pub enum DefaultValueData {
         /// Use hexadecimal to represent binary data
         String(&'static str),
@@ -271,6 +194,28 @@ pub mod annotations {
         type Imr = Vec<String>;
         fn as_imr(&self) -> Self::Imr {
             self.iter().map(ToString::to_string).collect()
+        }
+    }
+}
+
+/// Location in the source code a model or field originates from
+/// Used for better error messages in the migration tool
+#[derive(Copy, Clone)]
+pub struct Source {
+    /// Filename of the source code of the model or field
+    pub file: &'static str,
+    /// Line of the model or field
+    pub line: usize,
+    /// Column of the model or field
+    pub column: usize,
+}
+
+impl From<Source> for imr::Source {
+    fn from(source: Source) -> Self {
+        imr::Source {
+            file: source.file.to_string(),
+            line: source.line,
+            column: source.column,
         }
     }
 }
