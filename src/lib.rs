@@ -3,7 +3,6 @@
 #![warn(missing_docs)]
 
 pub mod config;
-pub mod hmr;
 /// This module holds the internal model representation
 pub mod imr;
 pub mod lints;
