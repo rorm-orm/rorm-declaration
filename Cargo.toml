@@ -1,8 +1,8 @@
 [package]
 name = "rorm-declaration"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-repository = "https://github.com/myOmikron/drorm"
+repository = "https://github.com/rorm-orm/rorm-declaration"
 categories = ["database"]
 authors = ["myOmikron <git@omikron.dev>", "gammelalf"]
 keywords = ["database", "declarative"]
@@ -26,7 +26,7 @@ strum = { version = "~0.24" }
 
 [features]
 default = [
-    "serde/derive",
     "ordered-float/serde",
+    "serde/derive",
     "strum/derive"
 ]
