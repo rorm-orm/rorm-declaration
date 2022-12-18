@@ -264,7 +264,7 @@ mod test {
 }
 
 /// Represents a foreign key
-#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct ForeignKey {
     /// Name of the table that should be referenced
@@ -275,17 +275,6 @@ pub struct ForeignKey {
     pub on_delete: ReferentialAction,
     /// Action to be used in case of an update
     pub on_update: ReferentialAction,
-}
-
-impl Default for ForeignKey {
-    fn default() -> Self {
-        ForeignKey {
-            table_name: String::from(""),
-            column_name: String::from(""),
-            on_delete: Default::default(),
-            on_update: Default::default(),
-        }
-    }
 }
 
 /**
