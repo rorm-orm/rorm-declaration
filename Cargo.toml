@@ -24,6 +24,9 @@ serde = { version = "1.0" }
 # Macros and Traits for working with enums
 strum = { version = "~0.24" }
 
+[build-dependencies]
+rustc_version = "0.4.0"
+
 [features]
 default = [
     "ordered-float/serde",
