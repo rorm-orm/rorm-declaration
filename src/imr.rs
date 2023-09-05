@@ -113,7 +113,7 @@ pub struct Source {
 #[serde(rename_all = "lowercase")]
 pub enum DbType {
     VarChar,
-    VarBinary,
+    Binary,
     Int8,
     Int16,
     Int32,
