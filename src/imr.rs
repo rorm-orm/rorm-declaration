@@ -128,6 +128,10 @@ pub enum DbType {
     Timestamp,
     Time,
     Choices,
+    Uuid,
+    MacAddress,
+    IpNetwork,
+    BitVec,
 }
 
 /// The subset of annotations which need to be communicated with the migration tool

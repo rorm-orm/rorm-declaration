@@ -107,6 +107,11 @@ pub enum Operation {
     /// Representation of a RawSQL operation
     #[serde(rename_all = "PascalCase")]
     RawSQL {
+        /// The provided raw sql does not change the structure of the database.
+        /// The migrator can assume that the layout stayed the same and will continue
+        /// generating new migrations based on `.models.json`
+        #[serde(default)]
+        structure_safe: bool,
         /// SQL for sqlite
         #[serde(rename = "SQLite")]
         sqlite: String,

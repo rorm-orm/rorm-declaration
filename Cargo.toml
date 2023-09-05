@@ -16,16 +16,16 @@ path = "src/lib.rs"
 
 [dependencies]
 # Implements Eq and Order types for f64
-ordered-float = { version = "3.0" }
+ordered-float = { version = "~3" }
 
 # serde defines (de-)serialization behaviour for structs and enums
-serde = { version = "1.0" }
+serde = { version = "~1" }
 
 # Macros and Traits for working with enums
-strum = { version = "~0.24" }
+strum = { version = "~0.25" }
 
 [build-dependencies]
-rustc_version = "0.4.0"
+rustc_version = { version = "~0.4" }
 
 [features]
 default = [
@@ -33,3 +33,7 @@ default = [
     "serde/derive",
     "strum/derive"
 ]
+
+sqlite = []
+mysql = []
+postgres = []

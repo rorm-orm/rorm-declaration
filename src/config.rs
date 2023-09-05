@@ -9,12 +9,14 @@ The representation of all supported DB drivers
 #[serde(tag = "Driver")]
 pub enum DatabaseDriver {
     /// Representation of the SQLite driver
+    #[cfg(feature = "sqlite")]
     #[serde(rename_all = "PascalCase")]
     SQLite {
         /// The filename of the sqlite database
         filename: String,
     },
     /// Representation of the Postgres driver
+    #[cfg(feature = "postgres")]
     #[serde(rename_all = "PascalCase")]
     Postgres {
         /// Name of the database
@@ -29,6 +31,7 @@ pub enum DatabaseDriver {
         password: String,
     },
     /// Representation of the MySQL / MariaDB driver
+    #[cfg(feature = "mysql")]
     #[serde(rename_all = "PascalCase")]
     MySQL {
         /// Name of the database
