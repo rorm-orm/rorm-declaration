@@ -1,3 +1,5 @@
+Integrated into rorm monorepo
+
 # rorm-declaration
 
 [![license](https://img.shields.io/github/license/rorm-orm/rorm-declaration?label=License)](LICENSE)
